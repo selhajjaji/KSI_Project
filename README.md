@@ -3,6 +3,8 @@ This project is a Flask-based API powered by a Machine Learning model to predict
 It includes a simple frontend interface for manual predictions and an API endpoint for automated predictions.
 
 KSI_Project/
+
+
 ├── app/                    
 │   ├── __init__.py            # Initializes Flask app
 │   ├── main.py                # Entry point to run Flask app
@@ -13,10 +15,17 @@ KSI_Project/
 │   │   └── index.html         # Main prediction page
 │   ├── static/                # Static files (CSS, JS, images)
 │   │   └── css/styles.css     # Styles for the frontend
+
+
+
 ├── data/                      
 │   └── PASSENGER_KSI.csv      # Original dataset
+
+
+
 ├── scripts/                   
 │   └── train_model.py         # Data preprocessing, model training, and saving
-├── requirements.txt           # Python package dependencies
+
+
 ├── README.md                  # Project documentation
-└── report.pdf                 # Final project report
+
