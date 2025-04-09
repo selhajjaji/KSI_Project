@@ -183,13 +183,6 @@ def convert_age_range(age_range):
 
 df['INVAGE'] = df['INVAGE'].apply(convert_age_range)
 
-# =======================
-# Fill missing values
-# =======================
-cat_cols = ['TRAFFCTL', 'VISIBILITY', 'LIGHT', 'RDSFCOND', 'IMPACTYPE']
-for col in cat_cols:
-    df[col] = df[col].fillna(df[col].mode()[0])
-
 df['INVAGE'] = df['INVAGE'].fillna(df['INVAGE'].median())
 
 # =======================
@@ -213,7 +206,8 @@ df['RushHour'] = df['Hour'].apply(lambda x: 1 if x in [7, 8, 9, 16, 17, 18] else
 # =======================
 target = 'ACCLASS'
 features = ['TRAFFCTL', 'VISIBILITY', 'LIGHT', 'RDSFCOND', 'IMPACTYPE',
-            'INVAGE', 'LATITUDE', 'LONGITUDE', 'Month', 'DayOfWeek', 'Hour', 'RushHour']
+            'INVAGE', 'INVTYPE', 'Month', 'DayOfWeek', 'Hour',
+            'SPEEDING', 'ALCOHOL']
 
 # Drop rows with missing values
 df = df.dropna(subset=features + [target])
@@ -231,14 +225,16 @@ y = df[target].apply(lambda val: 1 if val == 'Fatal' else 0)
 # =======================
 # Preprocessing pipeline
 # =======================
-numeric_features = ['INVAGE', 'LATITUDE', 'LONGITUDE', 'Month', 'DayOfWeek', 'Hour']
-categorical_features = ['TRAFFCTL', 'VISIBILITY', 'LIGHT', 'RDSFCOND', 'IMPACTYPE']
+numeric_features = ['INVAGE', 'Month', 'DayOfWeek', 'Hour']
+categorical_features = ['TRAFFCTL', 'VISIBILITY', 'LIGHT', 'RDSFCOND', 'IMPACTYPE',
+                        'INVTYPE','SPEEDING', 'ALCOHOL']
 
 numeric_transformer = Pipeline(steps=[
     ('scaler', StandardScaler())
 ])
 
 categorical_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="most_frequent")),
     ('onehot', OneHotEncoder(handle_unknown='ignore'))
 ])
 
@@ -254,25 +250,23 @@ preprocessor = ColumnTransformer(
 X_processed = preprocessor.fit_transform(X)
 
 # =======================
-# Handle class imbalance
+# Train/test split BEFORE SMOTE
+# =======================
+X_train, X_test, y_train, y_test = train_test_split(X_processed, y, test_size=0.2, random_state=42)
+ 
+# =======================
+# Handle class imbalance (SMOTE applied only to training data)
 # =======================
 smote = SMOTE(random_state=42)
-X_balanced, y_balanced = smote.fit_resample(X_processed, y)
-
-# ------------------------
-# 3. Train/Test & Modeling
-# ------------------------
-print("\n 3. Train/Test & Modeling\n")
-X_train, X_test, y_train, y_test = train_test_split(
-    X_balanced, y_balanced, test_size=0.2, random_state=28)
-
+X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
+ # =======================
 # 3.1 Define Models
 models = {
-    "Logistic Regression": LogisticRegression(max_iter=500, random_state=28),
-    "Decision Tree": DecisionTreeClassifier(random_state=28),
-    "Random Forest": RandomForestClassifier(random_state=28),
-    "SVM": SVC(probability=True, random_state=28),
-    "Neural Network": MLPClassifier(random_state=28)
+    "Logistic Regression": LogisticRegression(max_iter=500, random_state=42),
+    "Decision Tree": DecisionTreeClassifier(random_state=42),
+    "Random Forest": RandomForestClassifier(random_state=42),    
+    "SVM": SVC(probability=True, random_state=42),
+    "Neural Network": MLPClassifier(random_state=42)
 }
 param_grids = {
     "Logistic Regression": {"C": [0.01, 0.1, 1, 10]},
@@ -289,7 +283,7 @@ print("\n--- Model Training and Tuning ---")
 for name, model in models.items():
     print(f"\nTraining {name}...")
     grid = GridSearchCV(model, param_grids[name], cv=3, n_jobs=-1, scoring='f1')
-    grid.fit(X_train, y_train)
+    grid.fit(X_train_balanced, y_train_balanced)
     best_model = grid.best_estimator_
     best_models[name] = best_model
     y_pred = best_model.predict(X_test)
@@ -306,21 +300,17 @@ best_model_name = max(model_scores, key=model_scores.get)
 best_model = best_models[best_model_name]
 print('best model is : ',best_model)
 
-#print("\nSaving the model for deployment in progress......\n")
-# Save model for deployment
+print("\nSaving the model for deployment in progress......\n")
+# Save model for deployment    
 
-#with open("../app/model/model.pkl", "wb") as f:
- #   pickle.dump(best_model, f)
-    
-#print("\nThe model has been saved\n")
 print("\nCreating full pipeline with best model...")
 full_pipeline = Pipeline([
     ('preprocessor', preprocessor),
     ('classifier', best_model)
 ])
 print("\nSaving the full pipeline for deployment...")
-with open("../app/model/full_pipeline.pkl", "wb") as f:
-    pickle.dump(full_pipeline, f)
+with open("../app/model/model.pkl", "wb") as f:
+   pickle.dump(full_pipeline, f)
     
 print("\nThe full pipeline has been saved")
 # --------------------------
