@@ -22,7 +22,7 @@ from sklearn.compose import ColumnTransformer
 
 
 # Load the model
-model = pickle.load(open('app/model/full_pipeline.pkl', 'rb'))
+model = pickle.load(open('app/model/model.pkl', 'rb'))
 
 
 def configure_routes(app):
@@ -40,11 +40,9 @@ def configure_routes(app):
                        
              # Predict
              prediction = model.predict(input_data)
-             proba = model.predict_proba(input_data)[:, 1]  # Probability of "Fatal"
-             
+             proba = model.predict_proba(input_data)[:, 1]  # Probability of "Fatal"                     
              return jsonify({
                  "prediction": int(prediction[0]),
-                 "probability": float(proba[0]),
                  "message": "Fatal" if prediction[0] == 1 else "Non-Fatal"
              })
 
