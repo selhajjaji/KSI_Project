@@ -19,20 +19,22 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
-
+from flask_cors import CORS
 
 # Load the model
 model = pickle.load(open('app/model/model.pkl', 'rb'))
 
 
 def configure_routes(app):
+    CORS(app)
     
     @app.route('/predict', methods=['POST'])
     def predict():
         try:
                         
-              # Get JSON data from Postman
+            
              data = request.get_json()
+             print("Received Data:", data)
              
              # Convert to DataFrame (ensure keys match your features)
              input_data = pd.DataFrame([data])
